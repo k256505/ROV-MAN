@@ -11,8 +11,7 @@ Take control of a customizable rover, navigate a perilous grid, collect all the 
 ---
 
 ## 📸 Gameplay Demo
-*(Tip: Record a quick 5-second GIF of you playing the game and upload it to your repo, then replace this text with `![Gameplay](gameplay.gif)`)*
-
+![Gameplay](GAMEPLAY.gif)
 ---
 
 ## 🎮 How to Play
