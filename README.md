@@ -1,64 +1,92 @@
-# 🚜 ROV-MAN | A Segfault Survivor
+# ROV-MAN
 
-![C](https://img.shields.io/badge/Language-C-blue.svg)
-![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)
-![Environment](https://img.shields.io/badge/Environment-Terminal-black.svg)
+A terminal-based 2D maze game written in C, built as a second-semester Computer Engineering project. The goal was to implement a real-time game loop, enemy AI, and flicker-free rendering from scratch — no game engine, no graphics library.
 
-**ROV-MAN** is a fast-paced, terminal-based 2D maze navigation game written entirely in C for my 2nd-semester Computer Engineering project. 
-
-Take control of a customizable rover, navigate a perilous grid, collect all the data points, and outsmart the dynamically tracking enemies. Do you have what it takes to survive the segfault?
-
----
-
-## 📸 Gameplay Demo
 ![Gameplay](GAMEPLAY.gif)
----
-
-## 🎮 How to Play
-
-### The Objective
-Collect all **159 yellow dots** scattered across the map to win. If an enemy touches you, it's Game Over!
-
-### The Elements
-* 🟩 **The Rover:** You! Choose between *The Aerial*, *The Tanker*, or *The Digger*.
-* 🟡 **Data Points (`.`):** Collect these to increase your score.
-* 🟥 **Enemies (`X`):** Relentless hunters that track your movements.
-* 🟦 **Walls (`#`):** Impassable boundaries.
-* 🟪 **Obstacles (`=`):** Internal blocks you must navigate around.
-
-### Controls
-Real-time movement (No need to press Enter!)
-* **[ W ]** - Move Up
-* **[ S ]** - Move Down
-* **[ A ]** - Move Left
-* **[ D ]** - Move Right
 
 ---
 
-## ⚙️ Under the Hood (Technical Details)
+## Overview
 
-This project was built to explore core C programming concepts, memory management, and terminal manipulation. Here is how the engine works:
+You control a rover navigating a 20×20 grid. Collect all 159 data points before two enemies close in. The enemies move every turn, actively pathfinding toward you. If one reaches your position, the game ends.
 
-* **The Map Engine:** The game world is built on a `20x20` 2D `char` array. The grid updates dynamically based on player position and enemy coordinates.
-* **Flicker-Free Rendering:** Instead of constantly clearing the screen with `system("cls")` (which causes terrible screen tearing), the game uses the ANSI escape code `\033[H` to instantly snap the cursor back to the top-left of the terminal. This redraws the map over the old frame instantly, providing smooth, flicker-free gameplay.
-* **True RGB Coloring:** The game breaks away from standard 16-color terminal limits by utilizing **24-bit True RGB ANSI escape codes** (e.g., `\033[1;38;2;255;0;0m` for bright red enemies) to make the grid pop visually.
-* **Real-Time Input:** Utilizes `<conio.h>` and `getch()` to capture keyboard strokes instantly, allowing for fluid character movement without pausing the game loop.
-* **Smart Enemy Pathfinding:** The enemies use a "Manhattan Distance" algorithm to actively hunt the player. The AI compares the absolute X and Y distances between itself and the rover, prioritizing the longest axis while dynamically navigating around walls and obstacles.
+**Rover types** (cosmetic only — different character sets):
 
----
+| Name | Characters (forward / backward / left / right) |
+|---|---|
+| The Aerial | `^` `v` `<` `>` |
+| The Tanker | `M` `W` `E` `3` |
+| The Digger | `n` `u` `c` `o` |
 
-## 🚀 How to Run the Game
-
-### Requirements
-Because this game utilizes `<conio.h>` for real-time input and `system("cls")` for initial screen clearing, it is designed to be compiled and run on **Windows**.
-
-### Installation & Compilation
-1. Clone this repository: `git clone https://github.com/k256505/ROV-MAN.git`
-2. Navigate to the directory: `cd ROV-MAN`
-3. Compile the C file: `gcc robo_navigator.c -o rov-man`
-4. Run the executable: `rov-man.exe` (or `./rov-man.exe` depending on your terminal)
+**Controls:** `W` `A` `S` `D` — real-time, no Enter required.
 
 ---
 
-## 👨‍💻 Author
-Created by **AYAAN** as a 2nd-Semester Computer Engineering Project.
+## Technical Implementation
+
+### Game Loop & Rendering
+
+The game runs a blocking input loop using `getch()` from `<conio.h>`, which captures keystrokes without waiting for Enter. Each frame redraws the entire 20×20 grid.
+
+To avoid the screen flicker that `system("cls")` causes, the renderer uses the ANSI escape code `\033[H` to snap the cursor back to the top-left of the terminal and draw over the previous frame in place. This is the same technique used in classic terminal UIs.
+
+Color output uses 24-bit true color ANSI sequences (`\033[1;38;2;R;G;Bm`), bypassing the standard 16-color terminal palette entirely.
+
+### Map Representation
+
+The game world is a `char map[20][20]` array. Every game element — walls, paths, obstacles, enemies, the rover — is stored as a character directly in this array. Movement is handled by writing the new character to the target cell and restoring the previous cell to what it held before.
+
+Enemies each track `enemy_under[e]`, the character that was at their position before they moved onto it, so that cell can be correctly restored when the enemy moves away.
+
+### Enemy AI
+
+Enemy movement is resolved once per player move. Each enemy runs a greedy Manhattan distance comparison:
+
+```
+diff_p = |player_row - enemy_row|
+diff_q = |player_col - enemy_col|
+```
+
+If the row distance is greater, the enemy attempts to close the row gap first. Otherwise, it closes the column gap. If the preferred axis is blocked by a wall or obstacle, it falls back to the secondary axis. If both are blocked, the enemy holds position.
+
+This produces enemies that navigate around the map's internal structure without requiring a full pathfinding graph — appropriate for the map's layout, where corridors typically leave one axis free.
+
+### Enemy Spawning
+
+Enemies spawn at random positions validated against the following conditions:
+
+- Not a wall (`#`), obstacle (`=`), or blank space
+- Not already occupied by another enemy
+- Not the player's starting position
+
+Spawn is retried until a valid cell is found.
+
+(I wrote the enemy_under[] restore pattern myself, don't overwrite the cell or you'll lose the data point)
+
+---
+
+## Build & Run
+
+Requires Windows. The game uses `<conio.h>` for real-time input, which is not available on Linux or macOS without additional libraries.
+
+```bash
+git clone https://github.com/k256505/ROV-MAN.git
+cd ROV-MAN
+gcc robo_navigator.c -o rov-man
+rov-man.exe
+```
+
+---
+
+## Known Limitations
+
+- **Windows-only.** `<conio.h>` and `getch()` are not POSIX. A cross-platform port would require `ncurses` or raw terminal mode via `termios`.
+- **Greedy pathfinding.** The Manhattan distance heuristic can get enemies stuck in specific map configurations where both axes are blocked simultaneously. A BFS or A* implementation would solve this but was outside the scope of the project.
+- **Single-file architecture.** All logic — map, rendering, input, AI — lives in `robo_navigator.c`. Splitting into modules (map, render, entity) would make the codebase easier to extend.
+- **Fixed map.** The grid is hardcoded. A procedural or file-loaded map system would add replayability.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
