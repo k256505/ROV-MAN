@@ -1,4 +1,4 @@
-# ROV-MAN
+# PATHFINDER
 
 A terminal-based 2D maze game written in C, built as a second-semester Computer Engineering project. The goal was to implement a real-time game loop, enemy AI, and flicker-free rendering from scratch — no game engine, no graphics library.
 
@@ -26,9 +26,9 @@ You control a rover navigating a 20×20 grid. Collect all 159 data points before
 
 ### Game Loop & Rendering
 
-The game runs a blocking input loop using `getch()` from `<conio.h>`, which captures keystrokes without waiting for Enter. Each frame redraws the entire 20×20 grid.
+The game runs a blocking input loop using `getch()`, which captures keystrokes without waiting for Enter. On Windows this uses `<conio.h>`. On Linux, the same behavior is implemented manually using `termios` raw mode — disabling canonical input and echo, reading one character, then restoring the terminal state.
 
-To avoid the screen flicker that `system("cls")` causes, the renderer uses the ANSI escape code `\033[H` to snap the cursor back to the top-left of the terminal and draw over the previous frame in place. This is the same technique used in classic terminal UIs.
+Each frame redraws the entire 20×20 grid. To avoid the screen flicker that `system("cls")` causes, the renderer uses the ANSI escape code `\033[H` to snap the cursor back to the top-left of the terminal and draw over the previous frame in place. This is the same technique used in classic terminal UIs.
 
 Color output uses 24-bit true color ANSI sequences (`\033[1;38;2;R;G;Bm`), bypassing the standard 16-color terminal palette entirely.
 
@@ -36,7 +36,7 @@ Color output uses 24-bit true color ANSI sequences (`\033[1;38;2;R;G;Bm`), bypas
 
 The game world is a `char map[20][20]` array. Every game element — walls, paths, obstacles, enemies, the rover — is stored as a character directly in this array. Movement is handled by writing the new character to the target cell and restoring the previous cell to what it held before.
 
-Enemies each track `enemy_under[e]`, the character that was at their position before they moved onto it, so that cell can be correctly restored when the enemy moves away.
+Enemies each track `enemy_under[e]`, the character that was at their position before they moved onto it, so that cell can be correctly restored when the enemy moves away. Without this, any dot an enemy walks over would be permanently erased and the map becomes unsolvable.
 
 ### Enemy AI
 
@@ -61,29 +61,40 @@ Enemies spawn at random positions validated against the following conditions:
 
 Spawn is retried until a valid cell is found.
 
-(I wrote the enemy_under[] restore pattern myself, don't overwrite the cell or you'll lose the data point)
-
 ---
 
 ## Build & Run
 
-Requires Windows. The game uses `<conio.h>` for real-time input, which is not available on Linux or macOS without additional libraries.
+The game compiles on both Windows and Linux. Platform differences are handled at compile time using preprocessor directives — `<conio.h>` on Windows, `termios` raw mode on Linux.
 
+### Linux (GCC)
 ```bash
-git clone https://github.com/k256505/ROV-MAN.git
-cd ROV-MAN
-gcc robo_navigator.c -o rov-man
-rov-man.exe
+git clone https://github.com/k256505/pathfinder.git
+cd pathfinder
+gcc robo_navigator.c -o pathfinder
+./pathfinder
+```
+
+### Windows (GCC / MinGW)
+```bash
+git clone https://github.com/k256505/pathfinder.git
+cd pathfinder
+gcc robo_navigator.c -o pathfinder.exe
+pathfinder.exe
+```
+
+### Cross-compile Windows binary from Linux
+```bash
+x86_64-w64-mingw32-gcc robo_navigator.c -o pathfinder.exe
 ```
 
 ---
 
 ## Known Limitations
 
-- **Windows-only.** `<conio.h>` and `getch()` are not POSIX. A cross-platform port would require `ncurses` or raw terminal mode via `termios`.
 - **Greedy pathfinding.** The Manhattan distance heuristic can get enemies stuck in specific map configurations where both axes are blocked simultaneously. A BFS or A* implementation would solve this but was outside the scope of the project.
-- **Single-file architecture.** All logic — map, rendering, input, AI — lives in `robo_navigator.c`. Splitting into modules (map, render, entity) would make the codebase easier to extend.
-- **Fixed map.** The grid is hardcoded. A procedural or file-loaded map system would add replayability.
+- **Single-file architecture.** All logic — map, rendering, input, AI — lives in one file. Splitting into modules (map, render, entity) would make the codebase easier to extend.
+- **Fixed map.** The grid is hardcoded. A file-loaded map system would allow multiple levels and add replayability.
 
 ---
 
