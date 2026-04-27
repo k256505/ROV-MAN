@@ -69,7 +69,7 @@ int main(void){
         map[enemy_p[e]][enemy_q[e]] = enemy_char;
     }
     printf("============[- ROV-MAN | A SEGFAULT SURVIVOR -]============\n\n");
-    printf("1. The Aerial - ( ^ | < | > | v )\n2. The Tanker - ( M | W | E | 3 )\n3. The Minert - ( n | u | c | o )\n\nSelect your Rover (1 - 3): ");
+    printf("1. The Aerial - ( ^ | < | > | v )\n2. The Tanker - ( M | W | E | 3 )\n3. The Digger - ( n | u | c | o )\n\nSelect your Rover (1 - 3): ");
     scanf("%d",&rover_select);
     switch(rover_select){
         case 1:
